@@ -33,140 +33,144 @@ public class ClientOperation {
 	private static BufferedReader bufferReader = new BufferedReader(new InputStreamReader(System.in));
 	private static RMIInterface server;
 
-
 	private static String username = "";
 	private static String password = "";
+	//private  byte[] mac = null;
 	private static UUID session;
 	private static DiffeHillmanClient diffeHillmenClient;
-	
-	private static UUID login() throws NoSuchPaddingException, Exception
-	{
+
+	private static UUID login() throws NoSuchPaddingException, Exception {
 		Login login = new Login();
 		System.out.print("Username: ");
 		username = bufferReader.readLine();
-		byte [] encryptedUsername = diffeHillmenClient.doSymmetricEncryption(username);
-		login.setUsername(encryptedUsername);
+		byte[] encryptedUsername = diffeHillmenClient.doSymmetricEncryption(username);
+		//login.setUsername(encryptedUsername);
 		System.out.print("Password: ");
 		password = bufferReader.readLine();
-		byte [] encryptedPassword = diffeHillmenClient.doSymmetricEncryption(password);
+		byte[] encryptedPassword = diffeHillmenClient.doSymmetricEncryption(password);
+		//login.setPassword(encryptedPassword);
+		 byte[] mac;
+		mac = diffeHillmenClient.calculateMac(encryptedUsername, encryptedPassword);
+		//Login login = new Login(mac);
+		login.setMac(mac);
+		login.setUsername(encryptedUsername);
 		login.setPassword(encryptedPassword);
 		return server.login(login);
 	}
-	private static void refreshAuth() throws NoSuchPaddingException, Exception
-	{
-		while (!server.isLoggedIn(username))
-		{
+
+	private static void refreshAuth() throws NoSuchPaddingException, Exception {
+		while (!server.isLoggedIn(username)) {
 			session = login();
 		}
 	}
 
-	private static void execute(int cmd) throws NoSuchPaddingException, Exception
-	{
+	private static void execute(int cmd) throws NoSuchPaddingException, Exception {
 		String filename;
 		byte[] Encryptedfilename;
 		String printer;
 		byte[] encryptedPrinter;
+		byte[] mac;
 		int job;
 		String parameter;
 		String value;
-		switch (cmd)
-		{
-			case 1:
-				System.out.print("Filename: ");
-				filename = bufferReader.readLine();
-				
-			    Encryptedfilename = diffeHillmenClient.doSymmetricEncryption(filename);
-				System.out.print("Printer: ");
-				printer = bufferReader.readLine();
-				encryptedPrinter = diffeHillmenClient.doSymmetricEncryption(printer);
-				refreshAuth();
-				Printing print = new Printing(Encryptedfilename,encryptedPrinter);
-				server.sendPrintingObject(print);
-				//System.out.println(server.print(encodedParams,Encryptedfilename, encryptedPrinter, session));
-				break;
+		switch (cmd) {
+		case 1:
+			System.out.print("Filename: ");
+			filename = bufferReader.readLine();
+			Encryptedfilename = diffeHillmenClient.doSymmetricEncryption(filename);
+			System.out.print("Printer: ");
+			printer = bufferReader.readLine();
+			encryptedPrinter = diffeHillmenClient.doSymmetricEncryption(printer);
+			
+			refreshAuth();
+			mac = diffeHillmenClient.calculateMac(Encryptedfilename, encryptedPrinter);
+			Printing print = new Printing(Encryptedfilename, encryptedPrinter,mac);
+			server.sendPrintingObject(print);
+			System.out.println(server.print(mac,Encryptedfilename,
+			encryptedPrinter, session));
+			break;
 
-			case 2:
-				System.out.print("Printer: ");
-				printer = bufferReader.readLine();
+		case 2:
+			System.out.print("Printer: ");
+			printer = bufferReader.readLine();
 
-				refreshAuth();
-				System.out.println(server.queue(printer, session));
-				break;
+			refreshAuth();
+			System.out.println(server.queue(printer, session));
+			break;
 
-			case 3:
-				System.out.print("Printer: ");
-				printer = bufferReader.readLine();
-				System.out.print("Job: ");
-				job = Integer.parseInt(bufferReader.readLine());
+		case 3:
+			System.out.print("Printer: ");
+			printer = bufferReader.readLine();
+			System.out.print("Job: ");
+			job = Integer.parseInt(bufferReader.readLine());
 
-				refreshAuth();
-				System.out.println(server.topQueue(printer, job, session));
-				break;
+			refreshAuth();
+			System.out.println(server.topQueue(printer, job, session));
+			break;
 
-			case 4:
-				refreshAuth();
-				System.out.println(server.start(session));
-				break;
+		case 4:
+			refreshAuth();
+			System.out.println(server.start(session));
+			break;
 
-			case 5:
-				refreshAuth();
-				System.out.println(server.stop(session));
-				break;
+		case 5:
+			refreshAuth();
+			System.out.println(server.stop(session));
+			break;
 
-			case 6:
-				refreshAuth();
-				System.out.println(server.restart(session));
-				break;
+		case 6:
+			refreshAuth();
+			System.out.println(server.restart(session));
+			break;
 
-			case 7:
-				System.out.print("Printer: ");
-				printer = bufferReader.readLine();
+		case 7:
+			System.out.print("Printer: ");
+			printer = bufferReader.readLine();
 
-				refreshAuth();
-				System.out.println(server.status(printer, session));
-				break;
+			refreshAuth();
+			System.out.println(server.status(printer, session));
+			break;
 
-			case 8:
-				System.out.print("Parameter: ");
-				parameter = bufferReader.readLine();
+		case 8:
+			System.out.print("Parameter: ");
+			parameter = bufferReader.readLine();
 
-				refreshAuth();
-				System.out.println(server.readConfig(parameter, session));
-				break;
+			refreshAuth();
+			System.out.println(server.readConfig(parameter, session));
+			break;
 
-			case 9:
-				System.out.print("Parameter: ");
-				parameter = bufferReader.readLine();
-				System.out.print("Value: ");
-				value = bufferReader.readLine();
+		case 9:
+			System.out.print("Parameter: ");
+			parameter = bufferReader.readLine();
+			System.out.print("Value: ");
+			value = bufferReader.readLine();
 
-				refreshAuth();
-				System.out.println(server.setConfig(parameter, value, session));
-				break;
+			refreshAuth();
+			System.out.println(server.setConfig(parameter, value, session));
+			break;
 
-			case 0:
-				System.out.println("Quitting...");
+		case 0:
+			System.out.println("Quitting...");
 		}
 	}
 
 	public static void main(String[] args) throws MalformedURLException, RemoteException, NotBoundException {
-		
-		//server = (RMIInterface) Naming.lookup("//localhost/MyServer");
-		 server = (RMIInterface)Naming.lookup("rmi://localhost:5099/MyServer");
+
+		// server = (RMIInterface) Naming.lookup("//localhost/MyServer");
+		server = (RMIInterface) Naming.lookup("rmi://localhost:5099/MyServer");
 
 		try {
 			int requestedOperation = -1;
-			 diffeHillmenClient = new DiffeHillmanClient();
-			 diffeHillmenClient.DiffeHillmenInit();
-			 byte[] alicePubKeyEnc = diffeHillmenClient.getAlicePubKeyEnc();
-			 //return remote public key of server
-			 byte[] serverPubKeyEnc = server.DiffeHillmenServer(alicePubKeyEnc);
-			 diffeHillmenClient.setServerPubKeyEnc(serverPubKeyEnc);
-			 diffeHillmenClient.generateSharedSecret();
-			 diffeHillmenClient.initSymmetricConnection();
-			 server.setAESEncodedParams(diffeHillmenClient.getEncodedParams());
-			while (requestedOperation != 0)
-			{
+			diffeHillmenClient = new DiffeHillmanClient();
+			diffeHillmenClient.DiffeHillmenInit();
+			byte[] clientPubKeyEnc = diffeHillmenClient.getClientPubKeyEnc();
+			// return remote public key of server
+			byte[] serverPubKeyEnc = server.DiffeHillmenServer(clientPubKeyEnc);
+			diffeHillmenClient.setServerPubKeyEnc(serverPubKeyEnc);
+			diffeHillmenClient.generateSharedSecret();
+			diffeHillmenClient.initSymmetricConnection();
+			server.setAESEncodedParams(diffeHillmenClient.getEncodedParams());
+			while (requestedOperation != 0) {
 				System.out.println();
 				System.out.println("1. print");
 				System.out.println("2. queue");
@@ -179,7 +183,7 @@ public class ClientOperation {
 				System.out.println("9. setConfig");
 				System.out.println("0. quit");
 				System.out.print(">");
-	
+
 				requestedOperation = Integer.parseInt(bufferReader.readLine());
 				execute(requestedOperation);
 			}

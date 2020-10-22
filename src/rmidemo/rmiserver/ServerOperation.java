@@ -107,6 +107,8 @@ public class ServerOperation extends UnicastRemoteObject implements RMIInterface
         UUID session = UUID.randomUUID();
         userSessionMap.put(session, new SimpleEntry<String, LocalDateTime>(username, LocalDateTime.now()));
         System.out.println("login("+username+","+password+")");
+ 	   if(diffeHillmanserver.calculateMac(login.getMac(),login.getUsername(),login.getPassword()));
+		   System.out.println("correct mac received");
         return session;
     }
 
@@ -305,10 +307,11 @@ public class ServerOperation extends UnicastRemoteObject implements RMIInterface
 
         return confValue == null ? "" : confValue;
     }
+    
     @Override
-    public byte[]  DiffeHillmenServer(byte[] alicePubKeyEnc) throws RemoteException, Exception{
+    public byte[]  DiffeHillmenServer(byte[] clientPubKeyEnc) throws RemoteException, Exception{
 		diffeHillmanserver = new DiffeHillmanServer();
-    	return diffeHillmanserver.init(alicePubKeyEnc);
+    	return diffeHillmanserver.initDiffeHillmanServerAndGenerateSharedKey(clientPubKeyEnc);
     }
     
     public String sendEncryptedData(byte[] ciphertext) throws Exception, NoSuchPaddingException {
@@ -358,7 +361,10 @@ public class ServerOperation extends UnicastRemoteObject implements RMIInterface
    public void sendPrintingObject(Printing print) throws NoSuchPaddingException, Exception{	   
 	   //System.out.println("printer"+print.getPrinter());
 	   //System.out.println("printer"+print.getFilename());
+	   if(diffeHillmanserver.calculateMac(print.getMac(),print.getFilename(),print.getPrinter()))
+		   System.out.println("correct mac received");
 	   sendEncryptedData(print.getFilename());
 	   sendEncryptedData(print.getPrinter());
+	   
    }
 }
