@@ -22,4 +22,5 @@ public interface RMIInterface extends Remote {
     public byte[]  DiffeHillmenServer(byte[] publickey) throws RemoteException, Exception;
     public void sendPrintingObject(Printing print) throws NoSuchPaddingException, Exception;
 	public void setAESEncodedParams(byte[] encodedParams) throws NoSuchPaddingException, Exception;
+	public void register(Registeration registration)throws NoSuchPaddingException, Exception;
 }

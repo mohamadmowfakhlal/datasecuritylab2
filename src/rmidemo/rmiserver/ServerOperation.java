@@ -1,6 +1,7 @@
 package rmidemo.rmiserver;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.rmi.Naming;
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
@@ -12,8 +13,10 @@ import java.security.InvalidKeyException;
 import java.security.KeyFactory;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
+import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.PublicKey;
+import java.security.SecureRandom;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.InvalidParameterSpecException;
 import java.security.spec.X509EncodedKeySpec;
@@ -22,7 +25,8 @@ import java.time.LocalDateTime;
 import rmidemo.rmiinterface.Login;
 import rmidemo.rmiinterface.Printing;
 import rmidemo.rmiinterface.RMIInterface;
-
+import rmidemo.rmiinterface.Registeration;
+import rmidemo.rmiinterface.Password;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.HashMap;
@@ -46,6 +50,7 @@ public class ServerOperation extends UnicastRemoteObject implements RMIInterface
     private HashMap<String, String> config = new HashMap<String, String>();
     private HashMap<UUID, Entry<String, LocalDateTime>> userSessionMap = new HashMap<UUID, Entry<String, LocalDateTime>>();
     private HashMap<String, String> userPassMap = new HashMap<String, String>();
+    private HashMap<String, Password> userRigerterationMap = new HashMap<String, Password>();
     private HashMap<String, ArrayList<String>> queue = new HashMap<String, ArrayList<String>>();
 
     private static final int TIMEOUT = 600; // Timeout in seconds
@@ -53,7 +58,31 @@ public class ServerOperation extends UnicastRemoteObject implements RMIInterface
     private static DiffeHillmanServer diffeHillmanserver;
     private boolean isRunning = false;
    
-
+    @Override
+    public void register(Registeration registration)throws NoSuchPaddingException, Exception
+    {
+    	Password pass= new Password();
+ 	   	String username = sendEncryptedData(registration.getUsername());
+ 	   	String password = sendEncryptedData(registration.getPassword());
+ 	   	//generating a random salt
+ 	   SecureRandom random = new SecureRandom();
+ 	   byte[] salt = new byte[16];
+ 	   random.nextBytes(salt);
+ 	   pass.setSalt(salt);
+ 	  //using the sha512 to hash the password 
+ 	  MessageDigest md = MessageDigest.getInstance("SHA-512");
+ 	  md.update(salt); 	 
+ 	  byte[] hashedPassword = md.digest(password.getBytes(StandardCharsets.UTF_8));
+ 	  pass.setHashedPassword(hashedPassword);
+ 	  //Todo here we need to check if the user already exit
+ 	  userRigerterationMap.put(username,pass);
+        System.out.println("register("+username+","+password+","+ hashedPassword.toString());
+        //check integrity
+ 	   if(diffeHillmanserver.calculateMac(registration.getMac(),registration.getUsername(),registration.getPassword()));
+		   System.out.println("correct data received");
+    }
+    
+    
     protected ServerOperation() throws RemoteException {
         super();
         userPassMap.put("ella", "ali");
@@ -97,9 +126,9 @@ public class ServerOperation extends UnicastRemoteObject implements RMIInterface
 
  	   	String username = sendEncryptedData(login.getUsername());
  	   	String password = sendEncryptedData(login.getPassword());
-        String pwToCheck = (String)userPassMap.get(username);
+        Password pwToCheck = (Password)userRigerterationMap.get(username);
 
-        if (pwToCheck == null || !pwToCheck.equals(password))
+        if (pwToCheck == null || !pwToCheck.verify(password))
         {
             return null;
         }
@@ -108,9 +137,11 @@ public class ServerOperation extends UnicastRemoteObject implements RMIInterface
         userSessionMap.put(session, new SimpleEntry<String, LocalDateTime>(username, LocalDateTime.now()));
         System.out.println("login("+username+","+password+")");
  	   if(diffeHillmanserver.calculateMac(login.getMac(),login.getUsername(),login.getPassword()));
-		   System.out.println("correct mac received");
+		   System.out.println("correct data received");
         return session;
     }
+    
+
 
     @Override
     public String print(byte[] encodedParams,byte [] filename, byte[] printer, UUID session) throws NoSuchPaddingException, Exception{

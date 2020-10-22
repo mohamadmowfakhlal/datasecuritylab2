@@ -27,7 +27,7 @@ import javax.crypto.spec.SecretKeySpec;
 import rmidemo.rmiinterface.Login;
 import rmidemo.rmiinterface.Printing;
 import rmidemo.rmiinterface.RMIInterface;
-
+import rmidemo.rmiinterface.Registeration;
 public class ClientOperation {
 
 	private static BufferedReader bufferReader = new BufferedReader(new InputStreamReader(System.in));
@@ -49,13 +49,32 @@ public class ClientOperation {
 		password = bufferReader.readLine();
 		byte[] encryptedPassword = diffeHillmenClient.doSymmetricEncryption(password);
 		//login.setPassword(encryptedPassword);
-		 byte[] mac;
+		byte[] mac;
 		mac = diffeHillmenClient.calculateMac(encryptedUsername, encryptedPassword);
 		//Login login = new Login(mac);
 		login.setMac(mac);
 		login.setUsername(encryptedUsername);
 		login.setPassword(encryptedPassword);
 		return server.login(login);
+	}
+	
+	private static void register() throws NoSuchPaddingException, Exception{
+		Registeration registration = new Registeration();
+		System.out.print("Username: ");
+		username = bufferReader.readLine();
+		byte[] encryptedUsername = diffeHillmenClient.doSymmetricEncryption(username);
+		//login.setUsername(encryptedUsername);
+		System.out.print("Password: ");
+		password = bufferReader.readLine();
+		byte[] encryptedPassword = diffeHillmenClient.doSymmetricEncryption(password);
+		//login.setPassword(encryptedPassword);
+		byte[] mac;
+		mac = diffeHillmenClient.calculateMac(encryptedUsername, encryptedPassword);
+		//Login login = new Login(mac);
+		registration.setMac(mac);
+		registration.setUsername(encryptedUsername);
+		registration.setPassword(encryptedPassword);
+		server.register(registration);
 	}
 
 	private static void refreshAuth() throws NoSuchPaddingException, Exception {
@@ -151,6 +170,10 @@ public class ClientOperation {
 
 		case 0:
 			System.out.println("Quitting...");
+		case -2:
+			
+			System.out.println("Registeration...");
+			register();
 		}
 	}
 
