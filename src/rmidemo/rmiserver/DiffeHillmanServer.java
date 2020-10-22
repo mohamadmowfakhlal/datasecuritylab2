@@ -20,8 +20,7 @@ import javax.crypto.NoSuchPaddingException;
 import javax.crypto.interfaces.DHPublicKey;
 import javax.crypto.spec.DHParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
-import java.security.spec.ECParameterSpec;
-import java.security.interfaces.ECPublicKey;
+
 public class DiffeHillmanServer {
 	 private byte[] bobSharedSecret ;
 	 private byte[] encodedParams;
@@ -42,7 +41,7 @@ public class DiffeHillmanServer {
          * in encoded format.
          * He instantiates a DH public key from the encoded key material.
          */
-        KeyFactory bobKeyFac = KeyFactory.getInstance("EC");
+        KeyFactory bobKeyFac = KeyFactory.getInstance("DH");
         X509EncodedKeySpec x509KeySpec = new X509EncodedKeySpec(alicePubKeyEnc);
         
         PublicKey alicePubKey = bobKeyFac.generatePublic(x509KeySpec);
@@ -52,17 +51,17 @@ public class DiffeHillmanServer {
          * He must use the same parameters when he generates his own key
          * pair.
          */
-        ECParameterSpec dhParamFromAlicePubKey = ((ECPublicKey)alicePubKey).getParams();
+        DHParameterSpec dhParamFromAlicePubKey = ((DHPublicKey)alicePubKey).getParams();
 
         // Bob creates his own DH key pair
         System.out.println("BOB: Generate DH keypair ...");
-        KeyPairGenerator bobKpairGen = KeyPairGenerator.getInstance("EC");
+        KeyPairGenerator bobKpairGen = KeyPairGenerator.getInstance("DH");
         bobKpairGen.initialize(dhParamFromAlicePubKey);
         KeyPair bobKpair = bobKpairGen.generateKeyPair();
 
         // Bob creates and initializes his DH KeyAgreement object
         System.out.println("BOB: Initialization ...");
-        KeyAgreement bobKeyAgree = KeyAgreement.getInstance("ECDH");
+        KeyAgreement bobKeyAgree = KeyAgreement.getInstance("DH");
         bobKeyAgree.init(bobKpair.getPrivate());
 
         // Bob encodes his public key, and sends it over to Alice.

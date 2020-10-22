@@ -21,4 +21,5 @@ public interface RMIInterface extends Remote {
     public String setConfig(String parameter, String value, UUID session) throws RemoteException;   // sets the parameter to value
     public byte[]  DiffeHillmenServer(byte[] publickey) throws RemoteException, Exception;
     public void sendPrintingObject(Printing print) throws NoSuchPaddingException, Exception;
+	public void setAESEncodedParams(byte[] encodedParams) throws NoSuchPaddingException, Exception;
 }

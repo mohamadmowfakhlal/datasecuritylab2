@@ -30,19 +30,18 @@ public class DiffeHillmanClient {
          * Alice creates her own DH key pair with 2048-bit key size
          */
         System.out.println("ALICE: Generate DH keypair ...");
-        KeyPairGenerator aliceKpairGen = KeyPairGenerator.getInstance("EC");
-        aliceKpairGen.initialize(128);
+        KeyPairGenerator aliceKpairGen = KeyPairGenerator.getInstance("DH");
+        aliceKpairGen.initialize(2048);
         KeyPair aliceKpair = aliceKpairGen.generateKeyPair();
         
         // Alice creates and initializes her DH KeyAgreement object
         System.out.println("ALICE: Initialization ...");
-        aliceKeyAgree = KeyAgreement.getInstance("ECDH");
+        aliceKeyAgree = KeyAgreement.getInstance("DH");
         aliceKeyAgree.init(aliceKpair.getPrivate());
         
         // Alice encodes her public key, and sends it over to Bob.
          setAlicePubKeyEnc(aliceKpair.getPublic().getEncoded());
-
-    
+   
 	}
 	
 	public void generateSharedSecret() throws Exception {
@@ -53,7 +52,7 @@ public class DiffeHillmanClient {
          * Before she can do so, she has to instantiate a DH public key
          * from Bob's encoded key material.
          */
-        KeyFactory aliceKeyFac = KeyFactory.getInstance("EC");
+        KeyFactory aliceKeyFac = KeyFactory.getInstance("DH");
         X509EncodedKeySpec x509KeySpec = new X509EncodedKeySpec(getBobPubKeyEnc());
         PublicKey bobPubKey = aliceKeyFac.generatePublic(x509KeySpec);
         System.out.println("ALICE: Execute PHASE1 ...");
@@ -149,7 +148,7 @@ setEncodedParams(bobCipher.getParameters().getEncoded());
 		return bobPubKeyEnc;
 	}
 
-	public static void setBobPubKeyEnc(byte[] bobPubKeyEnc) {
+	public static void setServerPubKeyEnc(byte[] bobPubKeyEnc) {
 		DiffeHillmanClient.bobPubKeyEnc = bobPubKeyEnc;
 	}
 

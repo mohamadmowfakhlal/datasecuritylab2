@@ -30,31 +30,28 @@ import rmidemo.rmiinterface.RMIInterface;
 
 public class ClientOperation {
 
-	private static BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+	private static BufferedReader bufferReader = new BufferedReader(new InputStreamReader(System.in));
 	private static RMIInterface server;
+
+
 	private static String username = "";
 	private static String password = "";
 	private static UUID session;
-	private static DiffeHillmanClient diffeHillmen;
+	private static DiffeHillmanClient diffeHillmenClient;
+	
 	private static UUID login() throws NoSuchPaddingException, Exception
 	{
 		Login login = new Login();
 		System.out.print("Username: ");
-		username = br.readLine();
-		byte [] encryptedUsername = diffeHillmen.doSymmetricEncryption(username);
+		username = bufferReader.readLine();
+		byte [] encryptedUsername = diffeHillmenClient.doSymmetricEncryption(username);
 		login.setUsername(encryptedUsername);
 		System.out.print("Password: ");
-		password = br.readLine();
-		byte [] encryptedPassword = diffeHillmen.doSymmetricEncryption(password);
+		password = bufferReader.readLine();
+		byte [] encryptedPassword = diffeHillmenClient.doSymmetricEncryption(password);
 		login.setPassword(encryptedPassword);
-		login.setEncodedParams(diffeHillmen.getEncodedParams());
 		return server.login(login);
 	}
-	
-
-
-
-
 	private static void refreshAuth() throws NoSuchPaddingException, Exception
 	{
 		while (!server.isLoggedIn(username))
@@ -76,21 +73,21 @@ public class ClientOperation {
 		{
 			case 1:
 				System.out.print("Filename: ");
-				filename = br.readLine();
+				filename = bufferReader.readLine();
 				
-			    Encryptedfilename = diffeHillmen.doSymmetricEncryption(filename);
+			    Encryptedfilename = diffeHillmenClient.doSymmetricEncryption(filename);
 				System.out.print("Printer: ");
-				printer = br.readLine();
-				encryptedPrinter = diffeHillmen.doSymmetricEncryption(printer);
+				printer = bufferReader.readLine();
+				encryptedPrinter = diffeHillmenClient.doSymmetricEncryption(printer);
 				refreshAuth();
-				Printing print = new Printing(diffeHillmen.getEncodedParams(),Encryptedfilename,encryptedPrinter);
+				Printing print = new Printing(Encryptedfilename,encryptedPrinter);
 				server.sendPrintingObject(print);
 				//System.out.println(server.print(encodedParams,Encryptedfilename, encryptedPrinter, session));
 				break;
 
 			case 2:
 				System.out.print("Printer: ");
-				printer = br.readLine();
+				printer = bufferReader.readLine();
 
 				refreshAuth();
 				System.out.println(server.queue(printer, session));
@@ -98,9 +95,9 @@ public class ClientOperation {
 
 			case 3:
 				System.out.print("Printer: ");
-				printer = br.readLine();
+				printer = bufferReader.readLine();
 				System.out.print("Job: ");
-				job = Integer.parseInt(br.readLine());
+				job = Integer.parseInt(bufferReader.readLine());
 
 				refreshAuth();
 				System.out.println(server.topQueue(printer, job, session));
@@ -123,7 +120,7 @@ public class ClientOperation {
 
 			case 7:
 				System.out.print("Printer: ");
-				printer = br.readLine();
+				printer = bufferReader.readLine();
 
 				refreshAuth();
 				System.out.println(server.status(printer, session));
@@ -131,7 +128,7 @@ public class ClientOperation {
 
 			case 8:
 				System.out.print("Parameter: ");
-				parameter = br.readLine();
+				parameter = bufferReader.readLine();
 
 				refreshAuth();
 				System.out.println(server.readConfig(parameter, session));
@@ -139,9 +136,9 @@ public class ClientOperation {
 
 			case 9:
 				System.out.print("Parameter: ");
-				parameter = br.readLine();
+				parameter = bufferReader.readLine();
 				System.out.print("Value: ");
-				value = br.readLine();
+				value = bufferReader.readLine();
 
 				refreshAuth();
 				System.out.println(server.setConfig(parameter, value, session));
@@ -158,15 +155,17 @@ public class ClientOperation {
 		 server = (RMIInterface)Naming.lookup("rmi://localhost:5099/MyServer");
 
 		try {
-			int cmd = -1;
-			 diffeHillmen = new DiffeHillmanClient();
-			 diffeHillmen.DiffeHillmenInit();
-			 byte[] alicePubKeyEnc = diffeHillmen.getAlicePubKeyEnc();
-			 byte[] bobPubKeyEnc = server.DiffeHillmenServer(alicePubKeyEnc);
-			 diffeHillmen.setBobPubKeyEnc(bobPubKeyEnc);
-			 diffeHillmen.generateSharedSecret();
-			 diffeHillmen.initSymmetricConnection();
-			while (cmd != 0)
+			int requestedOperation = -1;
+			 diffeHillmenClient = new DiffeHillmanClient();
+			 diffeHillmenClient.DiffeHillmenInit();
+			 byte[] alicePubKeyEnc = diffeHillmenClient.getAlicePubKeyEnc();
+			 //return remote public key of server
+			 byte[] serverPubKeyEnc = server.DiffeHillmenServer(alicePubKeyEnc);
+			 diffeHillmenClient.setServerPubKeyEnc(serverPubKeyEnc);
+			 diffeHillmenClient.generateSharedSecret();
+			 diffeHillmenClient.initSymmetricConnection();
+			 server.setAESEncodedParams(diffeHillmenClient.getEncodedParams());
+			while (requestedOperation != 0)
 			{
 				System.out.println();
 				System.out.println("1. print");
@@ -181,8 +180,8 @@ public class ClientOperation {
 				System.out.println("0. quit");
 				System.out.print(">");
 	
-				cmd = Integer.parseInt(br.readLine());
-				execute(cmd);
+				requestedOperation = Integer.parseInt(bufferReader.readLine());
+				execute(requestedOperation);
 			}
 		} catch (Exception e) {
 			e.printStackTrace();

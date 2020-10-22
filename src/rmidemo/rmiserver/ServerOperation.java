@@ -94,11 +94,9 @@ public class ServerOperation extends UnicastRemoteObject implements RMIInterface
     @Override
     public UUID login(Login login) throws NoSuchPaddingException, Exception
     {
-    	
-       
-        
- 	   	String username = sendEncryptedData(login.getEncodedParams(),login.getUsername());
- 	   	String password = sendEncryptedData(login.getEncodedParams(),login.getPassword());
+
+ 	   	String username = sendEncryptedData(login.getUsername());
+ 	   	String password = sendEncryptedData(login.getPassword());
         String pwToCheck = (String)userPassMap.get(username);
 
         if (pwToCheck == null || !pwToCheck.equals(password))
@@ -313,13 +311,14 @@ public class ServerOperation extends UnicastRemoteObject implements RMIInterface
     	return diffeHillmanserver.init(alicePubKeyEnc);
     }
     
-    public String sendEncryptedData(byte[] encodedParams,byte[] ciphertext) throws Exception, NoSuchPaddingException {
-    	diffeHillmanserver.setEncodedParams(encodedParams);
+    public String sendEncryptedData(byte[] ciphertext) throws Exception, NoSuchPaddingException {
     	diffeHillmanserver.initSymmetricConnection();
         return diffeHillmanserver.doSymmetricEncryption(ciphertext);
 	}
-
-    
+    @Override
+    public void setAESEncodedParams(byte[] encodedParams) {
+    	diffeHillmanserver.setEncodedParams(encodedParams);
+    }
     @Override
     public String setConfig(String parameter, String value, UUID session){
         if (!authenticate(session))
@@ -359,7 +358,7 @@ public class ServerOperation extends UnicastRemoteObject implements RMIInterface
    public void sendPrintingObject(Printing print) throws NoSuchPaddingException, Exception{	   
 	   //System.out.println("printer"+print.getPrinter());
 	   //System.out.println("printer"+print.getFilename());
-	   sendEncryptedData(print.getEncodedParams(),print.getFilename());
-	   sendEncryptedData(print.getEncodedParams(),print.getPrinter());
+	   sendEncryptedData(print.getFilename());
+	   sendEncryptedData(print.getPrinter());
    }
 }

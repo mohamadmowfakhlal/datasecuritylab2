@@ -5,7 +5,6 @@ import java.io.Serializable;
 public class Login implements Serializable{
 	private byte[] username;
 	private byte[] password;
-	private byte[] encodedParams;
 
 	public byte[] getUsername() {
 		return username;
@@ -18,11 +17,5 @@ public class Login implements Serializable{
 	}
 	public void setPassword(byte[] password) {
 		this.password = password;
-	}
-	public byte[] getEncodedParams() {
-		return encodedParams;
-	}
-	public void setEncodedParams(byte[] encodedParams) {
-		this.encodedParams = encodedParams;
 	}
 }
