@@ -1,11 +1,20 @@
 package rmidemo.rmiinterface;
 
+import java.io.Serializable;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
 
-public class Password {
+public class Password implements Serializable {
+	private String username;
+	public String getUsername() {
+		return username;
+	}
+
+	public void setUsername(String username) {
+		this.username = username;
+	}
 	private byte[] hashedsaltedPassword;
 	private byte[] salt;
 	public byte[] getHashedPassword() {
@@ -31,4 +40,9 @@ public class Password {
 	 	  
 		return Arrays.equals(hashedsaltedPassword,hashedPass);
 	}
+	 @Override
+	    public String toString() {
+	        return new StringBuffer(" salt: ").append(this.salt)
+	                .append(" hash salt : ").append(this.hashedsaltedPassword).toString();
+	    }
 }

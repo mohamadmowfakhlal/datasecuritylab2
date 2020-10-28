@@ -29,43 +29,43 @@ public class DiffeHillmanClient {
 	private static byte[] encodedParams;
 	private static Cipher cipher;
 
-	public void DiffeHillmenInit() throws IOException, RemoteException, Exception {
+	public byte[] init() throws IOException, RemoteException, Exception {
 		/*
-		 * Alice creates her own DH key pair with 2048-bit key size
+		 * client creates her own DH key pair with 2048-bit key size
 		 */
-		System.out.println("ALICE: Generate DH keypair ...");
+		System.out.println("client: Generate DH keypair ...");
 		KeyPairGenerator KpairGenerator = KeyPairGenerator.getInstance("DH");
 		KpairGenerator.initialize(2048);
 		KeyPair clienKPair = KpairGenerator.generateKeyPair();
 
-		// Alice creates and initializes her DH KeyAgreement object
-		System.out.println("ALICE: Initialization ...");
+		// client creates and initializes her DH KeyAgreement object
+		System.out.println("client: Initialization ...");
 		keyAgree = KeyAgreement.getInstance("DH");
 		keyAgree.init(clienKPair.getPrivate());
 
-		// Alice encodes her public key, and sends it over to Bob.
-		setClientPubKeyEnc(clienKPair.getPublic().getEncoded());
-
+		// client encodes her public key, and sends it over to Bob.
+		clientPubKeyEnc = clienKPair.getPublic().getEncoded();
+		return clientPubKeyEnc;
 	}
 
 	public void generateSharedSecret() throws Exception {
 		/*
-		 * Alice uses Bob's public key for the first (and only) phase of her version of
+		 * client uses Bob's public key for the first (and only) phase of her version of
 		 * the DH protocol. Before she can do so, she has to instantiate a DH public key
 		 * from Bob's encoded key material.
 		 */
-		KeyFactory aliceKeyFac = KeyFactory.getInstance("DH");
+		KeyFactory clientKeyFac = KeyFactory.getInstance("DH");
 		X509EncodedKeySpec x509KeySpec = new X509EncodedKeySpec(getServerPubKeyEnc());
-		PublicKey bobPubKey = aliceKeyFac.generatePublic(x509KeySpec);
-		System.out.println("ALICE: Execute PHASE1 ...");
+		PublicKey bobPubKey = clientKeyFac.generatePublic(x509KeySpec);
+		System.out.println("client: Execute PHASE1 ...");
 		keyAgree.doPhase(bobPubKey, true);
 		/*
-		 * At this stage, both Alice and Bob have completed the DH key agreement
+		 * At this stage, both client and Bob have completed the DH key agreement
 		 * protocol. Both generate the (same) shared secret.
 		 */
 
 		sharedSecret = keyAgree.generateSecret();
-		System.out.println("Alice secret: " + toHexString(sharedSecret));
+		System.out.println("client share secret: " + toHexString(sharedSecret));
 	}
 
 	public void initSymmetricConnection() throws NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeyException,
@@ -89,14 +89,14 @@ public class DiffeHillmanClient {
 		 * method.
 		 */
 		System.out.println("Use shared secret as SecretKey object ...");
-		SecretKeySpec aliceAesKey = new SecretKeySpec(sharedSecret, 0, 16, "AES");
+		SecretKeySpec clientAesKey = new SecretKeySpec(sharedSecret, 0, 16, "AES");
 
 		/*
 		 * Bob encrypts, using AES in CBC mode
 		 */
 		cipher = Cipher.getInstance("AES/CBC/PKCS5Padding");
-		cipher.init(Cipher.ENCRYPT_MODE, aliceAesKey);
-// Retrieve the parameter that was used, and transfer it to Alice in
+		cipher.init(Cipher.ENCRYPT_MODE, clientAesKey);
+// Retrieve the parameter that was used, and transfer it to client in
 // encoded format
 		setEncodedParams(cipher.getParameters().getEncoded());
 	}
