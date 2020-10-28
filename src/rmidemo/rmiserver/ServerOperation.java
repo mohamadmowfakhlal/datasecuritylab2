@@ -1,6 +1,17 @@
 package rmidemo.rmiserver;
 
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.EOFException;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.FileReader;
+import java.io.FileWriter;
 import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.nio.charset.StandardCharsets;
 import java.rmi.Naming;
 import java.rmi.RemoteException;
@@ -24,10 +35,11 @@ import java.time.LocalDateTime;
 
 import rmidemo.rmiinterface.Login;
 import rmidemo.rmiinterface.Printing;
-import rmidemo.rmiinterface.RMIInterface;
+import rmidemo.rmiinterface.PrintingInterface;
 import rmidemo.rmiinterface.Registeration;
 import rmidemo.rmiinterface.Password;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Base64;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -45,11 +57,11 @@ import javax.crypto.spec.SecretKeySpec;
 
 import java.util.AbstractMap.SimpleEntry;
 
-public class ServerOperation extends UnicastRemoteObject implements RMIInterface{
+public class ServerOperation extends UnicastRemoteObject implements PrintingInterface{
 
     private HashMap<String, String> config = new HashMap<String, String>();
     private HashMap<UUID, Entry<String, LocalDateTime>> userSessionMap = new HashMap<UUID, Entry<String, LocalDateTime>>();
-    private HashMap<String, String> userPassMap = new HashMap<String, String>();
+    //private HashMap<String, String> userPassMap = new HashMap<String, String>();
     private HashMap<String, Password> userRigerterationMap = new HashMap<String, Password>();
     private HashMap<String, ArrayList<String>> queue = new HashMap<String, ArrayList<String>>();
 
@@ -62,8 +74,8 @@ public class ServerOperation extends UnicastRemoteObject implements RMIInterface
     public void register(Registeration registration)throws NoSuchPaddingException, Exception
     {
     	Password pass= new Password();
- 	   	String username = sendEncryptedData(registration.getUsername());
- 	   	String password = sendEncryptedData(registration.getPassword());
+ 	   	String username = decryptCipherText(registration.getUsername());
+ 	   	String password = decryptCipherText(registration.getPassword());
  	   	//generating a random salt
  	   SecureRandom random = new SecureRandom();
  	   byte[] salt = new byte[16];
@@ -74,20 +86,59 @@ public class ServerOperation extends UnicastRemoteObject implements RMIInterface
  	  md.update(salt); 	 
  	  byte[] hashedPassword = md.digest(password.getBytes(StandardCharsets.UTF_8));
  	  pass.setHashedPassword(hashedPassword);
+ 	  pass.setUsername(username);
  	  //Todo here we need to check if the user already exit
- 	  userRigerterationMap.put(username,pass);
-        System.out.println("register("+username+","+password+","+ hashedPassword.toString());
+ 	 saveRegisteration(pass);
+ 	 userRigerterationMap.put(username,pass);
+        System.out.println("register("+username+","+ hashedPassword.toString());
         //check integrity
  	   if(diffeHillmanserver.calculateMac(registration.getMac(),registration.getUsername(),registration.getPassword()));
-		   System.out.println("correct data received");
+		   System.out.println("correct registeration data received");
+    }
+    public void WriteObjectToFile(Object serObj,String filepath) {
+    	 
+        try {
+            File newFile = new File("filename.txt");
+            System.out.println(newFile.length());
+            if(newFile.length() != 0 ) {
+            FileOutputStream fileOut = new FileOutputStream(filepath,true);
+            
+            ObjectOutputStream objectOut = new ObjectOutputStream(fileOut) {
+                protected void writeStreamHeader() throws IOException {
+                    reset();
+                }            	
+            };
+            objectOut.writeObject(serObj);
+            objectOut.close();
+            fileOut.close();
+            System.out.println("The Object  was succesfully written to a file");
+            }
+            else {
+            	FileOutputStream fileOut = new FileOutputStream(filepath,true);                
+                ObjectOutputStream objectOut = new ObjectOutputStream(fileOut);	
+                objectOut.writeObject(serObj);
+                objectOut.close();
+                fileOut.close();
+                System.out.println("The Object  was succesfully written to a file");
+            }
+            
+ 
+ 
+        } catch (Exception ex) {
+            ex.printStackTrace();
+        }
     }
     
-    
+    private  void saveRegisteration(Password pass) {
+
+
+          //FileWriter myWriter = new FileWriter("filename.txt");
+          WriteObjectToFile(pass,"filename.txt");
+    }
+   
     protected ServerOperation() throws RemoteException {
         super();
-        userPassMap.put("ella", "ali");
-        userPassMap.put("", "");
-        userPassMap.put("bullying", "embargo");
+
     }
 
     private boolean authenticate(UUID session)
@@ -124,62 +175,79 @@ public class ServerOperation extends UnicastRemoteObject implements RMIInterface
     public UUID login(Login login) throws NoSuchPaddingException, Exception
     {
 
- 	   	String username = sendEncryptedData(login.getUsername());
- 	   	String password = sendEncryptedData(login.getPassword());
-        Password pwToCheck = (Password)userRigerterationMap.get(username);
+ 	   	String username = decryptCipherText(login.getUsername());
+ 	   	String password = decryptCipherText(login.getPassword());
 
-        if (pwToCheck == null || !pwToCheck.verify(password))
-        {
-            return null;
-        }
-
+        Password logininfo = search(username);
+		if(logininfo != null) {
+        MessageDigest md = MessageDigest.getInstance("SHA-512"); 
+        md.update(logininfo.getSalt());
+		byte[] hashedPass = md.digest(password.getBytes(StandardCharsets.UTF_8));
+		byte[] hashedsaltedPassword = logininfo.getHashedPassword();
+		boolean correct = Arrays.equals(hashedsaltedPassword,hashedPass); 
+		if(correct)
+		 System.out.println("correct login info"); 
+		else return null;
+		}
         UUID session = UUID.randomUUID();
         userSessionMap.put(session, new SimpleEntry<String, LocalDateTime>(username, LocalDateTime.now()));
-        System.out.println("login("+username+","+password+")");
+        
+        System.out.println("login("+username+",)");
+        
  	   if(diffeHillmanserver.calculateMac(login.getMac(),login.getUsername(),login.getPassword()));
-		   System.out.println("correct data received");
-        return session;
+		   System.out.println("correct login  data received");
+	    return session;
     }
     
+    private  Password search(String username) throws FileNotFoundException, IOException, ClassNotFoundException {
+    		Password pr1;
+			FileInputStream fi = new FileInputStream(new File("filename.txt"));
+			ObjectInputStream oi = new ObjectInputStream(fi);
+			 while (true) {
+			        try {
+			        	pr1 = (Password) oi.readObject();
+			        	if(pr1.getUsername().equals(username)) {
+			        		fi.close();
+			        		oi.close();
+			        		return pr1;
+			        	}
+							
+			        }
+			        catch(EOFException e) {
+			        	fi.close();
+			        	oi.close();
+			        	return null;
+			        }
+			
+			}
+            }
 
-
-    @Override
-    public String print(byte[] encodedParams,byte [] filename, byte[] printer, UUID session) throws NoSuchPaddingException, Exception{
-        if (!authenticate(session))
-        {
-            return "AUTENTICATION ERROR!!!!!!!!";
-        }
-        String file = new String(filename);
-        String print = new String(filename);
-        System.out.println(getUsername(session) + ": print("+file+","+print+")");
-
-        if (!isRunning)
-        {
-            return "Service is not running";
-        }
-        
-        ArrayList<String> printerQueue;
-
-        if (!queue.keySet().contains(printer))
-        {
-            printerQueue = new ArrayList<String>();
-            //queue.put(printer, printerQueue);
-        }
-        else
-        {
-            printerQueue = queue.get(printer);
-        }
-
-        //printerQueue.add(filename);
-
-        return "Printing " + file + " on " + print;
-    }
+	/*
+	 * @Override public String print1(byte [] filename, byte[] printer, UUID
+	 * session) throws NoSuchPaddingException, Exception{
+	 * 
+	 * if (!authenticate(session)) { return "The session has expire "; } String
+	 * file = new String(filename); String print = new String(filename);
+	 * System.out.println(getUsername(session) + ": print("+file+","+print+")");
+	 * 
+	 * if (!isRunning) { return "Service is not running"; }
+	 * 
+	 * ArrayList<String> printerQueue;
+	 * 
+	 * if (!queue.keySet().contains(print)) { printerQueue = new
+	 * ArrayList<String>(); queue.put(print, printerQueue); } else { printerQueue =
+	 * queue.get(print); }
+	 * 
+	 * printerQueue.add(file);
+	 * 
+	 * return "Printing " + file + " on " + print; }
+	 */
 
     @Override
     public String queue(String printer, UUID session) throws RemoteException{
         if (!authenticate(session))
         {
-            return "AUTENTICATION ERROR!!!!!!!!";
+            return "The session has expire ";
         }
 
         System.out.println(getUsername(session) + ": queue()");
@@ -211,7 +279,7 @@ public class ServerOperation extends UnicastRemoteObject implements RMIInterface
     public String topQueue(String printer, int job, UUID session) throws RemoteException{
         if (!authenticate(session))
         {
-            return "AUTENTICATION ERROR!!!!!!!!";
+            return "The session has expire ";
         }
 
         System.out.println(getUsername(session) + ": topQueue("+job+")");
@@ -249,7 +317,7 @@ public class ServerOperation extends UnicastRemoteObject implements RMIInterface
     public String start(UUID session) throws RemoteException{
         if (!authenticate(session))
         {
-            return "AUTENTICATION ERROR!!!!!!!!";
+            return "The session has expire ";
         }
 
         System.out.println(getUsername(session) + ": start()");
@@ -267,7 +335,7 @@ public class ServerOperation extends UnicastRemoteObject implements RMIInterface
     public String stop(UUID session) throws RemoteException{
         if (!authenticate(session))
         {
-            return "AUTENTICATION ERROR!!!!!!!!";
+            return "The session has expire ";
         }
 
         System.out.println(getUsername(session) + ": stop()");
@@ -286,7 +354,7 @@ public class ServerOperation extends UnicastRemoteObject implements RMIInterface
     public String restart(UUID session) throws RemoteException{
         if (!authenticate(session))
         {
-            return "AUTENTICATION ERROR!!!!!!!!";
+            return "The session has expire ";
         }
 
         System.out.println(getUsername(session) + ": restart()");
@@ -300,7 +368,7 @@ public class ServerOperation extends UnicastRemoteObject implements RMIInterface
     public String status(String printer, UUID session) throws RemoteException{
         if (!authenticate(session))
         {
-            return "AUTENTICATION ERROR!!!!!!!!";
+            return "The session has expire ";
         }
 
         System.out.println(getUsername(session) + ": status()");
@@ -329,7 +397,7 @@ public class ServerOperation extends UnicastRemoteObject implements RMIInterface
     public String readConfig(String parameter, UUID session) throws RemoteException{
         if (!authenticate(session))
         {
-            return "AUTENTICATION ERROR!!!!!!!!";
+            return "The session has expire ";
         }
 
         System.out.println(getUsername(session) + ": readConfig("+parameter+")");
@@ -340,24 +408,27 @@ public class ServerOperation extends UnicastRemoteObject implements RMIInterface
     }
     
     @Override
-    public byte[]  DiffeHillmenServer(byte[] clientPubKeyEnc) throws RemoteException, Exception{
+    public byte[]  initDiffeHillmenServer(byte[] clientPubKeyEnc) throws RemoteException, Exception{
 		diffeHillmanserver = new DiffeHillmanServer();
     	return diffeHillmanserver.initDiffeHillmanServerAndGenerateSharedKey(clientPubKeyEnc);
     }
     
-    public String sendEncryptedData(byte[] ciphertext) throws Exception, NoSuchPaddingException {
+    public String decryptCipherText(byte[] ciphertext) throws Exception, NoSuchPaddingException {
     	diffeHillmanserver.initSymmetricConnection();
         return diffeHillmanserver.doSymmetricEncryption(ciphertext);
 	}
+    
     @Override
     public void setAESEncodedParams(byte[] encodedParams) {
     	diffeHillmanserver.setEncodedParams(encodedParams);
     }
+    
+    
     @Override
     public String setConfig(String parameter, String value, UUID session){
         if (!authenticate(session))
         {
-            return "AUTENTICATION ERROR!!!!!!!!";
+            return "The session has expire ";
         }
 
         System.out.println(getUsername(session) + ": setConfig("+parameter+","+value+")");
@@ -369,13 +440,23 @@ public class ServerOperation extends UnicastRemoteObject implements RMIInterface
 
 
     public static void main(String[] args){
-
+        try {
+            File myObj = new File("filename.txt");
+            if (myObj.createNewFile()) {
+              System.out.println("File created: " + myObj.getName());
+            } else {
+              System.out.println("File already exists.");
+            }
+          } catch (IOException e) {
+            System.out.println("An error occurred.");
+            e.printStackTrace();
+          }
         try {
             //System.setProperty("java.rmi.server.hostname","192.168.168.231");
 
             //Naming.rebind("//127.0.0.1/MyServer", new ServerOperation()); 
             System.out.println("Server ready");
-    		Registry registry = LocateRegistry.createRegistry(5099);
+    		Registry registry = LocateRegistry.createRegistry(5199);
     		registry.rebind("MyServer", new ServerOperation());
         } catch (Exception e) {
 
@@ -385,17 +466,44 @@ public class ServerOperation extends UnicastRemoteObject implements RMIInterface
         }
 
     }
-    /* Converts a byte to hex digit and writes to the supplied buffer
-    */
+   
 
    
-   public void sendPrintingObject(Printing print) throws NoSuchPaddingException, Exception{	   
+   public String print(Printing print, UUID session) throws NoSuchPaddingException, Exception{	   
 	   //System.out.println("printer"+print.getPrinter());
 	   //System.out.println("printer"+print.getFilename());
 	   if(diffeHillmanserver.calculateMac(print.getMac(),print.getFilename(),print.getPrinter()))
-		   System.out.println("correct mac received");
-	   sendEncryptedData(print.getFilename());
-	   sendEncryptedData(print.getPrinter());
+		   System.out.println("correct prininting data received");
+
+       if (!authenticate(session))
+       {
+           return "The session has expire ";
+       }
+
+       String file = decryptCipherText(print.getFilename());
+       String printer = decryptCipherText(print.getPrinter());
+       System.out.println(getUsername(session) + ": print("+file+","+printer+")");
+
+       if (!isRunning)
+       {
+           return "Service is not running";
+       }
+       
+       ArrayList<String> printerQueue;
+
+       if (!queue.keySet().contains(printer))
+       {
+           printerQueue = new ArrayList<String>();
+           queue.put(printer, printerQueue);
+       }
+       else
+       {
+           printerQueue = queue.get(printer);
+       }
+       
+       printerQueue.add(file);
+
+       return "Printing " + file + " on " + printer;
 	   
    }
 }

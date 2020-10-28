@@ -81,7 +81,7 @@ public class DiffeHillmanServer {
 		 * Bob uses Alice's public key for the first (and only) phase of his version of
 		 * the DH protocol.
 		 */
-		System.out.println("BOB: Execute PHASE1 ...");
+		System.out.println("server: Execute PHASE1 ...");
 		keyAgree.doPhase(clientPubKey, true);
 		/*
 		 * At this stage, both Alice and Bob have completed the DH key agreement
@@ -90,7 +90,7 @@ public class DiffeHillmanServer {
 
 		sharedSecret = keyAgree.generateSecret();
 		// provide output buffer of required size
-		System.out.println("server secret: " + toHexString(sharedSecret));
+		System.out.println("server share secret: " + toHexString(sharedSecret));
 		return serverPubKeyEnc;
 	}
 
@@ -110,7 +110,6 @@ public class DiffeHillmanServer {
 		try {
 			aesParams.init(getEncodedParams());
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 		cipher = Cipher.getInstance("AES/CBC/PKCS5Padding");
@@ -122,7 +121,7 @@ public class DiffeHillmanServer {
 		String retrivemessage = new String(recovered);
 		// if (!java.util.Arrays.equals(cleartext1, recovered)) throw new Exception("AES
 		// in CBC mode recovered text is different from cleartext");
-		System.out.println("AES in CBC mode recovered text is " + retrivemessage);
+		//System.out.println("AES in CBC mode recovered text is " + retrivemessage);
 
 		return retrivemessage;
 	}
