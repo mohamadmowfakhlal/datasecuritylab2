@@ -30,8 +30,6 @@ public class DiffeHillmanServer {
 	private Cipher cipher;
 	KeyAgreement keyAgree;
 
-	private byte[] clientPubKeyEnc;
-
 	public byte[] getSharedSecret() {
 		return sharedSecret;
 	}
@@ -47,11 +45,6 @@ public class DiffeHillmanServer {
 	public byte[] initDiffeHillmanServerAndGenerateSharedKey(byte[] clientPubKeyEnc) throws NoSuchAlgorithmException,
 			InvalidKeySpecException, InvalidAlgorithmParameterException, InvalidKeyException {
 
-		/*
-		 * Let's turn over to Bob. Bob has received Alice's public key in encoded
-		 * format. He instantiates a DH public key from the encoded key material.
-		 */
-		this.clientPubKeyEnc = clientPubKeyEnc;
 		KeyFactory bobKeyFac = KeyFactory.getInstance("DH");
 		X509EncodedKeySpec x509KeySpec = new X509EncodedKeySpec(clientPubKeyEnc);
 
@@ -90,7 +83,7 @@ public class DiffeHillmanServer {
 
 		sharedSecret = keyAgree.generateSecret();
 		// provide output buffer of required size
-		System.out.println("server share secret: " + toHexString(sharedSecret));
+		System.out.println("server share secret: ");
 		return serverPubKeyEnc;
 	}
 
@@ -119,9 +112,6 @@ public class DiffeHillmanServer {
 	public String doSymmetricEncryption(byte[] ciphertext) throws IllegalBlockSizeException, BadPaddingException {
 		byte[] recovered = cipher.doFinal(ciphertext);
 		String retrivemessage = new String(recovered);
-		// if (!java.util.Arrays.equals(cleartext1, recovered)) throw new Exception("AES
-		// in CBC mode recovered text is different from cleartext");
-		//System.out.println("AES in CBC mode recovered text is " + retrivemessage);
 
 		return retrivemessage;
 	}

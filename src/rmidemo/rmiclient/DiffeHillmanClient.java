@@ -65,7 +65,7 @@ public class DiffeHillmanClient {
 		 */
 
 		sharedSecret = keyAgree.generateSecret();
-		System.out.println("client share secret: " + toHexString(sharedSecret));
+		System.out.println("client share secret: ");
 	}
 
 	public void initSymmetricConnection() throws NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeyException,

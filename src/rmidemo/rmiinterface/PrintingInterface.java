@@ -21,6 +21,6 @@ public interface PrintingInterface extends Remote {
     public String setConfig(String parameter, String value, UUID session) throws RemoteException;   // sets the parameter to value
     public byte[]  initDiffeHillmenServer(byte[] publickey) throws RemoteException, Exception;
     public String print(Printing print,UUID session) throws NoSuchPaddingException, Exception;
-	public void setAESEncodedParams(byte[] encodedParams) throws NoSuchPaddingException, Exception;
+	public void initSymmetricConnection(byte[] encodedParams) throws NoSuchPaddingException, Exception;
 	public void register(Registeration registration)throws NoSuchPaddingException, Exception;
 }

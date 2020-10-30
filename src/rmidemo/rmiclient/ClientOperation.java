@@ -92,11 +92,15 @@ public class ClientOperation {
 		String parameter;
 		String value;
 		switch (cmd) {
+		case -2:			
+			System.out.println("Registeration...");
+			register();
+			break;
 		case 1:
-			System.out.print("Filename: ");
+			System.out.print("Enter the Filename that you to print: ");
 			filename = bufferReader.readLine();
 			Encryptedfilename = diffeHillmenClient.doSymmetricEncryption(filename);
-			System.out.print("Printer: ");
+			System.out.print("Ener the Printer name where you want to print file: ");
 			printer = bufferReader.readLine();
 			encryptedPrinter = diffeHillmenClient.doSymmetricEncryption(printer);
 			
@@ -107,7 +111,7 @@ public class ClientOperation {
 			break;
 
 		case 2:
-			System.out.print("Printer: ");
+			System.out.print("Enter the Printer name that you want to show the list of job that is waiting to be done in it: ");
 			printer = bufferReader.readLine();
 
 			refreshAuthentication();
@@ -115,9 +119,9 @@ public class ClientOperation {
 			break;
 
 		case 3:
-			System.out.print("Printer: ");
+			System.out.print("Enter the Printer name that you want to change the order in: ");
 			printer = bufferReader.readLine();
-			System.out.print("Job: ");
+			System.out.print("Enter the Job id that you want to give high prority: ");
 			job = Integer.parseInt(bufferReader.readLine());
 
 			refreshAuthentication();
@@ -125,22 +129,25 @@ public class ClientOperation {
 			break;
 
 		case 4:
+			System.out.print("start the server if it is not already started");
 			refreshAuthentication();
 			System.out.println(server.start(session));
 			break;
 
 		case 5:
+			System.out.print("stop the server ");
 			refreshAuthentication();
 			System.out.println(server.stop(session));
 			break;
 
 		case 6:
+			System.out.print("restart the server");
 			refreshAuthentication();
 			System.out.println(server.restart(session));
 			break;
 
 		case 7:
-			System.out.print("Printer: ");
+			System.out.print("Enter the Printer name that you want to show the status: ");
 			printer = bufferReader.readLine();
 
 			refreshAuthentication();
@@ -148,7 +155,7 @@ public class ClientOperation {
 			break;
 
 		case 8:
-			System.out.print("Parameter: ");
+			System.out.print("Enter the Parameter name : ");
 			parameter = bufferReader.readLine();
 
 			refreshAuthentication();
@@ -156,9 +163,9 @@ public class ClientOperation {
 			break;
 
 		case 9:
-			System.out.print("Parameter: ");
+			System.out.print("Enter the Parameter name : ");
 			parameter = bufferReader.readLine();
-			System.out.print("Value: ");
+			System.out.print("Value of the parameter is: ");
 			value = bufferReader.readLine();
 
 			refreshAuthentication();
@@ -167,29 +174,30 @@ public class ClientOperation {
 
 		case 0:
 			System.out.println("Quitting...");
-		case -2:
-			
-			System.out.println("Registeration...");
-			register();
+
 		}
 	}
 
 	public static void main(String[] args) throws MalformedURLException, RemoteException, NotBoundException {
 
-		// server = (RMIInterface) Naming.lookup("//localhost/MyServer");
 		server = (PrintingInterface) Naming.lookup("rmi://localhost:5199/MyServer");
 
 		try {
 			int requestedOperation = -1;
+			//create diffe-hillman client
 			diffeHillmenClient = new DiffeHillmanClient();			
+			// Initialize diffe-hillman return public key of client which is sent in the channel
 			byte[] clientPubKeyEnc = diffeHillmenClient.init(); 
-			// return remote public key of server
+			// return remote public key of server 
 			byte[] serverPubKeyEnc = server.initDiffeHillmenServer(clientPubKeyEnc);
 			diffeHillmenClient.setServerPubKeyEnc(serverPubKeyEnc);
+			//create the shared key from both client and server public key
 			diffeHillmenClient.generateSharedSecret();
+			//use the key in symmetric encryption
 			diffeHillmenClient.initSymmetricConnection();
 			byte[] encodedparams = diffeHillmenClient.getEncodedParams();
-			server.setAESEncodedParams(encodedparams);
+			//because we are using AES we need to send the public parameter to another party as an inilization vector 
+			server.initSymmetricConnection(encodedparams);
 			while (requestedOperation != 0) {
 				System.out.println();
 				System.out.println("-2. register");
