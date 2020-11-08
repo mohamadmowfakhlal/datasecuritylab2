@@ -164,7 +164,7 @@ public class DiffeHillmanClient {
 		DiffeHillmanClient.ciphertext = ciphertext;
 	}
 
-	public byte[] calculateMac(byte[] bytes) throws NoSuchAlgorithmException {
+	public byte[] calculateMac(byte[] encryptedfilename, byte[] encryptedPrinter) throws NoSuchAlgorithmException {
 	      Mac mac = Mac.getInstance("HmacSHA256");
 	      SecretKeySpec key = new SecretKeySpec(sharedSecret, 0, 16, "AES");
 	      try {
@@ -173,7 +173,9 @@ public class DiffeHillmanClient {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
-
+	      byte[] bytes = new byte[encryptedfilename.length + encryptedPrinter.length];
+	      System.arraycopy(encryptedfilename, 0, bytes, 0, encryptedfilename.length);
+	      System.arraycopy(encryptedPrinter, 0, bytes, encryptedfilename.length, encryptedPrinter.length);
 	      byte[] macResult = mac.doFinal(bytes);
 		return macResult;
 	}

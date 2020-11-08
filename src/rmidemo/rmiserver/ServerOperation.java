@@ -38,13 +38,11 @@ import rmidemo.rmiinterface.Printing;
 import rmidemo.rmiinterface.PrintingInterface;
 import rmidemo.rmiinterface.Registeration;
 import rmidemo.rmiinterface.Password;
-import rmidemo.rmiinterface.PolicyManagment;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Base64;
 import java.util.HashMap;
 import java.util.Iterator;
-import java.util.List;
 import java.util.UUID;
 import java.util.Map.Entry;
 
@@ -63,7 +61,6 @@ public class ServerOperation extends UnicastRemoteObject implements PrintingInte
 
 	private HashMap<String, String> config = new HashMap<String, String>();
 	private HashMap<UUID, Entry<String, LocalDateTime>> userSessionMap = new HashMap<UUID, Entry<String, LocalDateTime>>();
-	private HashMap<UUID,String> userRole= new HashMap<UUID,String>();
 	// private HashMap<String, String> userPassMap = new HashMap<String, String>();
 	// private HashMap<String, Password> userRigerterationMap = new HashMap<String,
 	// Password>();
@@ -79,7 +76,6 @@ public class ServerOperation extends UnicastRemoteObject implements PrintingInte
 		Password pass = new Password();
 		String username = decryptCipherText(registration.getUsername());
 		String password = decryptCipherText(registration.getPassword());
-		String type = decryptCipherText(registration.getType());
 		// generating a random salt
 		SecureRandom random = new SecureRandom();
 		byte[] salt = new byte[16];
@@ -91,27 +87,22 @@ public class ServerOperation extends UnicastRemoteObject implements PrintingInte
 		byte[] hashedPassword = md.digest(password.getBytes(StandardCharsets.UTF_8));
 		pass.setHashedPassword(hashedPassword);
 		pass.setUsername(username);
-		pass.setType(type);
 		// Todo here we need to check if the user already exit
 		saveRegisteration(pass);
 		// userRigerterationMap.put(username,pass);
 		System.out.println("register(" + username);
 		// check integrity
-	      byte[] bytes = new byte[registration.getUsername().length + registration.getPassword().length + registration.getType().length];
-	      System.arraycopy(registration.getUsername(), 0, bytes, 0, registration.getUsername().length);
-	      System.arraycopy(registration.getPassword(), 0, bytes, registration.getUsername().length, registration.getPassword().length);
-	      System.arraycopy(registration.getType(), 0, bytes, registration.getPassword().length, registration.getType().length);
-
-	      if (diffeHillmanserver.calculateMac(registration.getMac(),bytes))
-	    	  System.out.println("correct registeration data received");
+		if (diffeHillmanserver.calculateMac(registration.getMac(), registration.getUsername(),
+				registration.getPassword()));
+		System.out.println("correct registeration data received");
 	}
 
 	public void WriteObjectToFile(Object serObj, String filepath) {
 
 		try {
-			File passwordFile = new File(filepath);
-			System.out.println(passwordFile.length());
-			if (passwordFile.length() != 0) {
+			File newFile = new File("password.txt");
+			System.out.println(newFile.length());
+			if (newFile.length() != 0) {
 				FileOutputStream fileOut = new FileOutputStream(filepath, true);
 
 				ObjectOutputStream objectOut = new ObjectOutputStream(fileOut) {
@@ -136,24 +127,20 @@ public class ServerOperation extends UnicastRemoteObject implements PrintingInte
 			ex.printStackTrace();
 		}
 	}
-	
-
 
 	private void saveRegisteration(Password pass) {
 
 		WriteObjectToFile(pass, "password.txt");
 	}
 
-	protected ServerOperation() throws Exception {
+	protected ServerOperation() throws RemoteException {
 		super();
-		//PolicyManagment.createPermmison();
-		PolicyManagment.createPolicy();
+
 	}
 
 	private boolean authenticate(UUID session) {
 		SimpleEntry<String, LocalDateTime> value = (SimpleEntry<String, LocalDateTime>) userSessionMap.get(session);
-		 if ( value.getValue().isBefore(LocalDateTime.now().minusSeconds(TIMEOUT)))
-			 userRole.remove(session);
+
 		return value == null ? false : !value.getValue().isBefore(LocalDateTime.now().minusSeconds(TIMEOUT));
 	}
 
@@ -172,46 +159,42 @@ public class ServerOperation extends UnicastRemoteObject implements PrintingInte
 				return authenticate(token.getKey());
 			}
 		}
+
 		return false;
 	}
 
 	@Override
 	public UUID login(Login login) throws NoSuchPaddingException, Exception {
-		// check integrity
-	      byte[] bytes = new byte[login.getUsername().length + login.getPassword().length ];
-	      System.arraycopy(login.getUsername(), 0, bytes, 0, login.getUsername().length);
-	      System.arraycopy(login.getPassword(), 0, bytes, login.getUsername().length, login.getPassword().length);
-			if (diffeHillmanserver.calculateMac(login.getMac(),bytes))
-				System.out.println("correct login  data received");
-			else {
-				System.out.println("data login  data received is not correct please resent again");
+		if (diffeHillmanserver.calculateMac(login.getMac(), login.getUsername(), login.getPassword()))
+			System.out.println("correct login  data received");
+		else {
+			System.out.println("data login  data received is not correct please resent again");
+			return null;
+		} 
+		//String username = decryptCipherText(login.getUsername());
+		String username = diffeHillmanserver.doSymmetricEncryption(login.getUsername());
+		//String password = decryptCipherText(login.getPassword());
+		String password = diffeHillmanserver.doSymmetricEncryption(login.getPassword());
+		Password logininfo = search(username);
+		if (logininfo != null) {
+			MessageDigest md = MessageDigest.getInstance("SHA-512");
+			md.update(logininfo.getSalt());
+			byte[] hashedPass = md.digest(password.getBytes(StandardCharsets.UTF_8));
+			byte[] hashedsaltedPassword = logininfo.getHashedPassword();
+			boolean correct = Arrays.equals(hashedsaltedPassword, hashedPass);
+			if (correct)
+				System.out.println("correct login info");
+			else
 				return null;
-			} 
-			//String username = decryptCipherText(login.getUsername());
-			String username = diffeHillmanserver.doSymmetricEncryption(login.getUsername());
-			//String password = decryptCipherText(login.getPassword());
-			String password = diffeHillmanserver.doSymmetricEncryption(login.getPassword());
-			Password logininfo = search(username);
-			if (logininfo != null) {
-				MessageDigest md = MessageDigest.getInstance("SHA-512");
-				md.update(logininfo.getSalt());
-				byte[] hashedPass = md.digest(password.getBytes(StandardCharsets.UTF_8));
-				byte[] hashedsaltedPassword = logininfo.getHashedPassword();
-				boolean correct = Arrays.equals(hashedsaltedPassword, hashedPass);
-				if (correct)
-					System.out.println("correct login info");
-				else
-					return null;
-			}
-			else {
-				System.out.println("username is not registered login");
-				return null;
-			}
-			String role = logininfo.getType();
-			UUID session = UUID.randomUUID();
-			userSessionMap.put(session, new SimpleEntry<String, LocalDateTime>(username, LocalDateTime.now()));
-			userRole.put(session,role);
-			System.out.println("login(" + username + ",)");
+		}
+		else {
+			System.out.println("username is not registered login");
+			return null;
+		}
+		UUID session = UUID.randomUUID();
+		userSessionMap.put(session, new SimpleEntry<String, LocalDateTime>(username, LocalDateTime.now()));
+
+		System.out.println("login(" + username + ",)");
 
 
 		return session;
@@ -240,14 +223,12 @@ public class ServerOperation extends UnicastRemoteObject implements PrintingInte
 	}
 
 	@Override
-	public String queue(String printer, UUID session) throws Exception, ClassNotFoundException, IOException {
+	public String queue(String printer, UUID session) throws RemoteException {
 		if (!authenticate(session)) {
 			return "The session has expire ";
 		}
-		List<String> permissions = PolicyManagment.getPermmsionForRole( userRole.get(session));
-		if(!permissions.contains("queue") )
-			return "You are not authorized to access the queue";
-		System.out.println(getUsername(session) + ": queue()" + userRole.get(session));
+
+		System.out.println(getUsername(session) + ": queue()");
 
 		if (!isRunning) {
 			return "service is not running";
@@ -447,11 +428,7 @@ public class ServerOperation extends UnicastRemoteObject implements PrintingInte
 	public String print(Printing print, UUID session) throws NoSuchPaddingException, Exception {
 		// System.out.println("printer"+print.getPrinter());
 		// System.out.println("printer"+print.getFilename());
-		// check integrity
-	      byte[] bytes = new byte[print.getPrinter().length + print.getFilename().length ];
-	      System.arraycopy(print.getFilename(), 0, bytes, 0, print.getFilename().length);
-	      System.arraycopy(print.getPrinter(), 0, bytes, print.getFilename().length, print.getPrinter().length);
-		if (diffeHillmanserver.calculateMac(print.getMac(), bytes))
+		if (diffeHillmanserver.calculateMac(print.getMac(), print.getFilename(), print.getPrinter()))
 			System.out.println("correct prininting data received");
 		else {
 			System.out.println(" prininting data received incorrectelly");
