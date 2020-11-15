@@ -8,6 +8,17 @@ import java.util.Arrays;
 
 public class Password implements Serializable {
 	private String username;
+	private byte[] hashedsaltedPassword;
+	private byte[] salt;
+	private String type;
+	public String getType() {
+		return type;
+	}
+
+	public void setType(String type) {
+		this.type = type;
+	}
+
 	public String getUsername() {
 		return username;
 	}
@@ -15,8 +26,7 @@ public class Password implements Serializable {
 	public void setUsername(String username) {
 		this.username = username;
 	}
-	private byte[] hashedsaltedPassword;
-	private byte[] salt;
+
 	public byte[] getHashedPassword() {
 		return hashedsaltedPassword;
 	}

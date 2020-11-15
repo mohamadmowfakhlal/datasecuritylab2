@@ -146,7 +146,7 @@ public class DiffeHillmanServer {
 	public void setEncodedParams(byte[] encodedParams) {
 		this.encodedParams = encodedParams;
 	}
-	public boolean calculateMac(byte[] receiveMac, byte[] encryptedfilename, byte[] encryptedPrinter) throws NoSuchAlgorithmException {
+	public boolean calculateMac(byte[] receiveMac,byte[] bytes) throws NoSuchAlgorithmException {
 	      Mac mac = Mac.getInstance("HmacSHA256");
 	      SecretKeySpec key = new SecretKeySpec(sharedSecret, 0, 16, "AES");
 	      try {
@@ -155,9 +155,7 @@ public class DiffeHillmanServer {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
-	      byte[] bytes = new byte[encryptedfilename.length + encryptedPrinter.length];
-	      System.arraycopy(encryptedfilename, 0, bytes, 0, encryptedfilename.length);
-	      System.arraycopy(encryptedPrinter, 0, bytes, encryptedfilename.length, encryptedPrinter.length);
+
 	      byte[] macResult = mac.doFinal(bytes);
 		return Arrays.equals(receiveMac,macResult);
 	}

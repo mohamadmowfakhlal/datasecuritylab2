@@ -44,37 +44,39 @@ public class PolicyManagment {
 		}
 	}
 */	
-	public static void createPolicy() throws Exception {
+	public static void createRoleBasedAccessControl() throws Exception {
 		FileOutputStream fileOut = new FileOutputStream("policy.txt", true);
 		ObjectOutputStream objectOut = new ObjectOutputStream(fileOut);
 
 		List<String>  fullPower = new ArrayList<String>(Arrays.asList("start","stop","restart","readConfig","setConfig","print","queue","topQueue","status"));
-		PolicyRow fullPowerPer = new PolicyRow("fullpower",fullPower);
+		RoleBasedPolicyRow fullPowerPer = new RoleBasedPolicyRow("fullpower",fullPower);
 		objectOut.writeObject(fullPowerPer);
 		
-		List<String>  powerUser = new ArrayList<String>(Arrays.asList("print","queue","topQueue"));
-		PolicyRow powerUserPer = new PolicyRow("powerUser",powerUser);
+		List<String>  powerUser = new ArrayList<String>(Arrays.asList("restart","queue","topQueue"));
+		RoleBasedPolicyRow powerUserPer = new RoleBasedPolicyRow("powerUser",powerUser);
 		objectOut.writeObject(powerUserPer);
 
 		
-		List<String>  technicain = new ArrayList<String>(Arrays.asList("start","stop","restart","readConfig","setConfig"));
-		PolicyRow technicainPer = new PolicyRow("technicain",technicain);
+		List<String>  technicain = new ArrayList<String>(Arrays.asList("start","stop","restart","readConfig","setConfig","status"));
+		RoleBasedPolicyRow technicainPer = new RoleBasedPolicyRow("technicain",technicain);
 		objectOut.writeObject(technicainPer);
 		
 		
-		List<String>  normalUser = new ArrayList<String>(Arrays.asList("print","status"));
-		PolicyRow normalUserPer = new PolicyRow("normaluser",normalUser);
+		List<String>  normalUser = new ArrayList<String>(Arrays.asList("print","queue"));
+		RoleBasedPolicyRow normalUserPer = new RoleBasedPolicyRow("normaluser",normalUser);
 		objectOut.writeObject(normalUserPer);
+		objectOut.close();
+		fileOut.close();
 
 	}
 
 	public static List<String> getPermmsionForRole(String roleName) throws FileNotFoundException, IOException, ClassNotFoundException {
-		PolicyRow pr1;
+		RoleBasedPolicyRow pr1;
 		FileInputStream fi = new FileInputStream(new File("policy.txt"));
 		ObjectInputStream oi = new ObjectInputStream(fi);
 		while (true) {
 			try {
-				pr1 = (PolicyRow) oi.readObject();
+				pr1 = (RoleBasedPolicyRow) oi.readObject();
 				if (pr1.getRole().equals(roleName)) {
 					fi.close();
 					oi.close();
@@ -88,5 +90,69 @@ public class PolicyManagment {
 			}
 
 		}
+	}
+	
+	public static List<String> getPermssionForUser(String userName) throws FileNotFoundException, IOException, ClassNotFoundException {
+		AccessControlListRow pr1;
+		 File newFile = new File("AccessControlListPolicy.txt");
+
+		    if (newFile.length() == 0)
+		    	return null;
+
+		FileInputStream fi = new FileInputStream(new File("AccessControlListPolicy.txt"));
+		ObjectInputStream oi = new ObjectInputStream(fi);
+		while (true) {
+			try {
+				pr1 = (AccessControlListRow) oi.readObject();
+				if (pr1.getUser().equals(userName)) {
+					fi.close();
+					oi.close();
+					return pr1.getPermissions();
+				}
+
+			} catch (EOFException e) {
+				fi.close();
+				oi.close();
+				return null;
+			}
+
+		}
+	}
+	
+	public static void createAccessControlList() throws Exception{
+		FileOutputStream fileOut = new FileOutputStream("AccessControlListPolicy.txt", true);
+		ObjectOutputStream objectOut = new ObjectOutputStream(fileOut);
+		
+		List<String>  alicePermissions = new ArrayList<String>(Arrays.asList("start","stop","restart","readConfig","setConfig","print","queue","topQueue","status"));
+		AccessControlListRow alice = new AccessControlListRow("Alice",alicePermissions);
+		objectOut.writeObject(alice);
+		
+		List<String>  ceciliaPermssions = new ArrayList<String>(Arrays.asList("restart","queue","topQueue"));
+		AccessControlListRow cecilia = new AccessControlListRow("Cecilia",ceciliaPermssions);
+		objectOut.writeObject(cecilia);
+
+		
+		List<String>  bobPermissions = new ArrayList<String>(Arrays.asList("start","stop","restart","readConfig","setConfig","status"));
+		AccessControlListRow bob = new AccessControlListRow("Bob",bobPermissions);
+		objectOut.writeObject(bob);
+		
+		
+		List<String>  davidPermssions = new ArrayList<String>(Arrays.asList("print","queue"));
+		AccessControlListRow david = new AccessControlListRow("David",davidPermssions);
+		objectOut.writeObject(david);
+	
+		List<String>  EricaPermssions = new ArrayList<String>(Arrays.asList("print","queue"));
+		AccessControlListRow erica = new AccessControlListRow("Erica",EricaPermssions);
+		objectOut.writeObject(erica);
+		
+		List<String>  fredPermssions = new ArrayList<String>(Arrays.asList("print","queue"));
+		AccessControlListRow fred = new AccessControlListRow("Fred",fredPermssions);
+		objectOut.writeObject(fred);
+		
+		List<String>  henryPermssions = new ArrayList<String>(Arrays.asList("print","queue"));
+		AccessControlListRow henry = new AccessControlListRow("Henry",henryPermssions);
+		objectOut.writeObject(henry);	objectOut.close();
+		fileOut.close();
+		
 	}
 }
